@@ -1,35 +1,29 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { Redis } from "@upstash/redis";
 
-const DB_PATH = path.resolve(process.cwd(), "data", "codes.json");
-
-function ensureDb(): Record<string, string> {
-  const dir = path.resolve(process.cwd(), "data");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, "{}");
-  return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
-}
+const redis = Redis.fromEnv();
 
 export async function GET() {
-  const db = ensureDb();
-  return NextResponse.json(db);
+  const keys = await redis.keys("code:*");
+  const codes: Record<string, string> = {};
+  for (const key of keys) {
+    const code = key.replace("code:", "");
+    const value = await redis.get(key);
+    if (value) codes[code] = value as string;
+  }
+  return NextResponse.json(codes);
 }
 
 export async function POST(req: Request) {
   const { code, base64url } = await req.json();
   if (!code || !base64url) return NextResponse.json({ error: "code ve base64url zorunlu" }, { status: 400 });
-  const db = ensureDb();
-  db[code.toLowerCase().trim()] = base64url;
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+  await redis.set(`code:${code.toLowerCase().trim()}`, base64url);
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: Request) {
   const { code } = await req.json();
   if (!code) return NextResponse.json({ error: "code zorunlu" }, { status: 400 });
-  const db = ensureDb();
-  delete db[code.toLowerCase().trim()];
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+  await redis.del(`code:${code.toLowerCase().trim()}`);
   return NextResponse.json({ ok: true });
 }

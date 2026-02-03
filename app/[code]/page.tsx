@@ -1,21 +1,15 @@
-import fs from "fs";
-import path from "path";
+import { Redis } from "@upstash/redis";
 import { decodeConfig } from "@/lib/config";
 import QuizGameWrapper from "@/components/QuizGameWrapper";
 
-const DB_PATH = path.resolve(process.cwd(), "data", "codes.json");
+const redis = Redis.fromEnv();
 
-function readDb(): Record<string, string> {
-  if (!fs.existsSync(DB_PATH)) return {};
-  return JSON.parse(fs.readFileSync(DB_PATH, "utf-8"));
-}
-
-export default function ShortCodePage({ params }: { params: { code: string } }) {
+export default async function ShortCodePage({ params }: { params: { code: string } }) {
   const slug = params.code?.toLowerCase();
   if (slug === "admin" || slug === "api") return null;
-  const db = readDb();
-  const raw = db[slug];
-  const config = raw ? decodeConfig(raw) : null;
+
+  const raw = await redis.get(`code:${slug}`);
+  const config = raw ? decodeConfig(raw as string) : null;
 
   if (!config) {
     return (
