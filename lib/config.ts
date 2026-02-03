@@ -4,7 +4,7 @@ import { QuizConfig, defaultConfig } from "./defaultConfig";
 export function decodeConfig(raw: string): QuizConfig | null {
   try {
     const base64 = raw.replace(/-/g, "+").replace(/_/g, "/");
-    const json   = atob(base64);                          // works in browser
+    const json   = decodeURIComponent(escape(atob(base64)));
     const parsed = JSON.parse(json);
     return validate(parsed) ? (parsed as QuizConfig) : null;
   } catch {
@@ -33,7 +33,7 @@ function validate(o: any): boolean {
   if (typeof o.youtubeUrl !== "string")     return false;
   if (typeof o.rewardMessage !== "string")  return false;
   if (typeof o.rewardImageUrl !== "string") return false;
-  if (!Array.isArray(o.questions) || o.questions.length !== 4) return false;
+  if (!Array.isArray(o.questions) || o.questions.length < 1) return false;
   if (!o.questions.every((q: any) => typeof q?.q === "string" && typeof q?.a === "string")) return false;
   if (!o.theme || typeof o.theme.accent !== "string") return false;
   return true;
