@@ -7,8 +7,9 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-export default async function ShortCodePage({ params }: { params: { code: string } }) {
-  const slug = params.code?.toLowerCase();
+export default async function ShortCodePage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  const slug = code?.toLowerCase();
   if (slug === "admin" || slug === "api") return null;
 
   const raw = await redis.get(`code:${slug}`);
