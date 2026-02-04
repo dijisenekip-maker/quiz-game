@@ -87,6 +87,13 @@ export default function QuizGame({ config }: { config: QuizConfig }) {
     });
   };
 
+  /* ── mobil klavye scroll ── */
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }, 300);
+  };
+
   /* ── Oyunu Başlat ── */
   const startGame = () => {
     setVideoId(extractVideoId(config.youtubeUrl));
@@ -175,6 +182,7 @@ export default function QuizGame({ config }: { config: QuizConfig }) {
             value={answer}
             onChange={e => setAnswer(e.target.value)}
             onKeyDown={onKeyDown}
+            onFocus={handleInputFocus}
             placeholder="Cevabını yaz..."
             style={{
               width: "100%", padding: "0.75rem 1rem",
