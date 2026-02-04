@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { QuizConfig } from "@/lib/defaultConfig";
 import YoutubeAudio, { extractVideoId } from "./YoutubeAudio";
 import Hearts from "./Hearts";
+import confetti from "canvas-confetti";
 
 /* ── shuffle a word into an array of letters (never returns original order) ── */
 function shuffleWord(word: string): string[] {
@@ -47,6 +48,7 @@ export default function QuizGame({ config }: { config: QuizConfig }) {
     const correct = config.questions[qIndex].a.trim().toLowerCase();
 
     if (typed === correct) {
+      heartConfetti();
       setErrMsg("");
       setHint(null);
       setWrongCount(0);
@@ -71,6 +73,19 @@ export default function QuizGame({ config }: { config: QuizConfig }) {
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") { e.preventDefault(); submitAnswer(); }
   }, [submitAnswer]);
+
+  /* ── kalp konfeti ── */
+  const heartConfetti = () => {
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.4 },
+      shapes: ["circle"],
+      colors: ["#ff0000", "#ff69b4", "#ff1493"],
+      gravity: 1.2,
+      scalar: 1.5
+    });
+  };
 
   /* ── Oyunu Başlat ── */
   const startGame = () => {
