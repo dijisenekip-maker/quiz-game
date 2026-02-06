@@ -66,6 +66,15 @@ function LinkGenerator() {
     fetch("/api/codes").then(r => r.json()).then(d => setAllCodes(d)).catch(() => {});
   }, []);
 
+  const generateRandomCode = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
+
   const updateQuestion = (i: number, field: "q" | "a", value: string) => {
     setQuestions(prev => prev.map((q, idx) => (idx === i ? { ...q, [field]: value } : q)));
   };
@@ -75,7 +84,6 @@ function LinkGenerator() {
   const validate = (): string | null => {
     if (!title.trim()) return "Başlık boş!";
     if (!youtubeUrl.trim()) return "YouTube URL boş!";
-    if (!shortCode.trim()) return "Kısa kod boş! (Örn: zeynep)";
     for (let i = 0; i < questions.length; i++) {
       if (!questions[i].q.trim()) return `${i + 1}. soru boş!`;
       if (!questions[i].a.trim()) return `${i + 1}. sorunun cevabı boş!`;
@@ -89,9 +97,16 @@ function LinkGenerator() {
     const err = validate();
     if (err) { setValidationError(err); return; }
     setValidationError("");
+
+    const finalCode = shortCode.trim() || generateRandomCode();
+    if (!/^[a-z0-9]+$/.test(finalCode)) {
+      setValidationError("Kısa kod sadece küçük harf ve rakam içerebilir!");
+      return;
+    }
+
     const config = { title, youtubeUrl, questions, rewardMessage, rewardImageUrl, theme: { accent } };
     const base64url = btoa(unescape(encodeURIComponent(JSON.stringify(config)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
-    const slug = shortCode.toLowerCase().trim();
+    const slug = finalCode.toLowerCase();
     await fetch("/api/codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: slug, base64url }) });
     setGeneratedLink(`${DOMAIN}/${slug}`);
     setCopied(false);
@@ -137,10 +152,11 @@ function LinkGenerator() {
           </Section>
 
           <Section label="Kısa Kod">
-            <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
               <span style={{ background: "#f0f0f0", border: "2px solid #e0e0e0", borderRight: "none", borderRadius: "10px 0 0 10px", padding: "10px 10px", fontSize: "0.88rem", color: "#666" }}>{DOMAIN}/</span>
-              <input style={{ ...inputStyle, borderRadius: "0 10px 10px 0", flex: 1 }} value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="zeynep" />
+              <input style={{ ...inputStyle, borderRadius: "0 10px 10px 0", flex: 1 }} value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="Boş bırakın, otomatik oluşturulur (Örn: x3k9m2)" />
             </div>
+            <p style={{ color: "#667eea", fontSize: "0.85rem", margin: 0 }}>💡 Boş bırakırsanız 6 haneli rastgele kod oluşturulur</p>
           </Section>
 
           <div style={{ marginBottom: 20 }}>
