@@ -208,13 +208,17 @@ export default function QuizGame({ config }: { config: QuizConfig }) {
                   padding: "14px 10px", textAlign: "center"
                 }}>
                   <p style={{ color: "#856404", fontWeight: 600, marginBottom: 8 }}>💡 İpucu</p>
-                  <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: hint.length > 15 ? 6 : 10 }}>
                     {hint.map((letter, i) => (
                       <span key={i} style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
-                        width: 38, height: 44, background: "#fff",
+                        width: hint.length > 15 ? 30 : 38,
+                        height: hint.length > 15 ? 36 : 44,
+                        background: "#fff",
                         border: "2px solid #ffc107", borderRadius: 8,
-                        fontWeight: 800, fontSize: "1.3rem", color: "#856404",
+                        fontWeight: 800,
+                        fontSize: hint.length > 15 ? "1rem" : "1.3rem",
+                        color: "#856404",
                         textTransform: "uppercase", boxShadow: "0 2px 4px rgba(0,0,0,.1)"
                       }}>
                         {letter}
