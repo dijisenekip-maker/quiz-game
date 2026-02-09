@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { decodeConfig } from "@/lib/config";
 
 const ADMIN_PASSWORD = "Ekip@2025";
 const DOMAIN = "askimizinsorulari.com.tr";
@@ -61,6 +62,8 @@ function LinkGenerator() {
   const [validationError, setValidationError] = useState("");
   const [shortCode, setShortCode] = useState("");
   const [allCodes, setAllCodes] = useState<Record<string,string>>({});
+  const [orderCode, setOrderCode] = useState("");
+  const [editingCode, setEditingCode] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/codes").then(r => r.json()).then(d => setAllCodes(d)).catch(() => {});
@@ -104,12 +107,13 @@ function LinkGenerator() {
       return;
     }
 
-    const config = { title, youtubeUrl, questions, rewardMessage, rewardImageUrl, theme: { accent } };
+    const config = { title, youtubeUrl, questions, rewardMessage, rewardImageUrl, theme: { accent }, orderCode: orderCode.trim() || undefined };
     const base64url = btoa(unescape(encodeURIComponent(JSON.stringify(config)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
     const slug = finalCode.toLowerCase();
     await fetch("/api/codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: slug, base64url }) });
     setGeneratedLink(`${DOMAIN}/${slug}`);
     setCopied(false);
+    setEditingCode(null);
     fetch("/api/codes").then(r => r.json()).then(d => setAllCodes(d));
   };
 
@@ -129,6 +133,31 @@ function LinkGenerator() {
     setAccent("#ff4d6d");
     setGeneratedLink("");
     setValidationError("");
+    setShortCode("");
+    setOrderCode("");
+    setEditingCode(null);
+  };
+
+  const handleEdit = (code: string) => {
+    const base64url = allCodes[code];
+    if (!base64url) return;
+
+    const config = decodeConfig(base64url);
+    if (!config) return;
+
+    setTitle(config.title);
+    setYoutubeUrl(config.youtubeUrl);
+    setQuestions(config.questions);
+    setRewardMessage(config.rewardMessage);
+    setRewardImageUrl(config.rewardImageUrl);
+    setAccent(config.theme.accent);
+    setShortCode(code);
+    setOrderCode(config.orderCode || "");
+    setEditingCode(code);
+    setGeneratedLink("");
+    setValidationError("");
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -149,6 +178,11 @@ function LinkGenerator() {
 
           <Section label="YouTube URL">
             <input style={inputStyle} value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
+          </Section>
+
+          <Section label="Sipariş Kodu (Opsiyonel)">
+            <input style={inputStyle} value={orderCode} onChange={e => setOrderCode(e.target.value)} placeholder="Örn: #1234, Ahmet-Ayşe" />
+            <p style={{ color: "#667eea", fontSize: "0.85rem", margin: "4px 0 0" }}>💡 Müşteriyi tanımak için sipariş numarası veya isim yazabilirsiniz</p>
           </Section>
 
           <Section label="Kısa Kod">
@@ -196,7 +230,9 @@ function LinkGenerator() {
             <p style={{ color: "#e74c3c", fontWeight: 600, textAlign: "center", background: "#ffe5e5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.9rem" }}>⚠️ {validationError}</p>
           )}
 
-          <button onClick={generateAndSave} style={primaryBtn}>🔗 Link Üret & Kaydet</button>
+          <button onClick={generateAndSave} style={primaryBtn}>
+            {editingCode ? "✏️ Güncelle" : "🔗 Link Üret & Kaydet"}
+          </button>
         </div>
 
         {generatedLink && (
@@ -209,16 +245,28 @@ function LinkGenerator() {
 
         {Object.keys(allCodes).length > 0 && (
           <div style={{ ...card, marginTop: 20 }}>
-            <h2 style={{ color: "#1a1a2e", fontSize: "1.1rem", marginBottom: 14 }}>📋 Kayıtlı Müşteriler</h2>
-            {Object.keys(allCodes).map(code => (
-              <div key={code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa", borderRadius: 10, padding: "10px 14px", marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, color: "#667eea" }}>{DOMAIN}/{code}</span>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => navigator.clipboard.writeText(`${DOMAIN}/${code}`)} style={{ background: "#667eea", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: "0.8rem" }}>📋 Kopi</button>
-                  <button onClick={async () => { await fetch("/api/codes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); fetch("/api/codes").then(r => r.json()).then(d => setAllCodes(d)); }} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: "0.8rem" }}>🗑️ Sil</button>
+            <h2 style={{ color: "#1a1a2e", fontSize: "1.1rem", marginBottom: 14 }}>📋 Kayıtlı Müşteriler ({Object.keys(allCodes).length})</h2>
+            {Object.keys(allCodes).map(code => {
+              const base64url = allCodes[code];
+              const config = decodeConfig(base64url);
+              const orderCodeDisplay = config?.orderCode ? ` [${config.orderCode}]` : "";
+
+              return (
+                <div key={code} style={{ background: "#f8f9fa", borderRadius: 10, padding: "10px 14px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: orderCodeDisplay ? 6 : 0 }}>
+                    <span style={{ fontWeight: 700, color: "#667eea", fontSize: "0.9rem" }}>{DOMAIN}/{code}</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => handleEdit(code)} style={{ background: "#10b981", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>✏️ Düzenle</button>
+                      <button onClick={() => navigator.clipboard.writeText(`${DOMAIN}/${code}`)} style={{ background: "#667eea", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>📋 Kopi</button>
+                      <button onClick={async () => { await fetch("/api/codes", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); fetch("/api/codes").then(r => r.json()).then(d => setAllCodes(d)); }} style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>🗑️ Sil</button>
+                    </div>
+                  </div>
+                  {orderCodeDisplay && (
+                    <p style={{ color: "#888", fontSize: "0.8rem", margin: 0, fontWeight: 600 }}>Sipariş: {config.orderCode}</p>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

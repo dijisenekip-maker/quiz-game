@@ -5,6 +5,7 @@ export interface QuizConfig {
   rewardMessage: string;
   rewardImageUrl: string;
   theme: { accent: string };
+  orderCode?: string;
 }
 
 export const defaultConfig: QuizConfig = {
